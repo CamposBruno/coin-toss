@@ -2,6 +2,9 @@
 cache/
 out/
 
+# ignore lib cause foundry
+lib/
+
 # Ignores development broadcast logs
 !/broadcast
 /broadcast/*/31337/
