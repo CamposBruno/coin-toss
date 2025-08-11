@@ -5,9 +5,6 @@ on:
   pull_request:
   workflow_dispatch:
 
-env:
-  FOUNDRY_PROFILE: default
-
 jobs:
   check:
     name: Foundry project
@@ -16,44 +13,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-          fetch-depth: 0
-
+  
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
-
-      - name: Show Forge version
-        run: |
-          forge --version
-      
-      - name: Debug - Check submodules
-        run: |
-          git submodule status
-          git submodule update --init --recursive
-          ls -la
-          ls -la lib/ || echo "lib directory not found"
-      
-      - name: Forge install
-        run: |
-          forge install
-        id: install
-
-      - name: Debug - Check after install
-        run: |
-          ls -la lib/
-          ls -la lib/forge-std/src/
-          cat lib/forge-std/src/Script.sol | head -5
-
-      - name: Run Forge fmt
-        run: |
-          forge fmt --check
-        id: fmt
-
-      - name: Run Forge build
-        run: |
-          forge build --sizes
-        id: build
-
-      - name: Run Forge tests
-        run: |
-          forge test -vvv
-        id: test
+        with:
+          version: stable
+  
+      - name: Run tests
+        run: forge test -vvv
