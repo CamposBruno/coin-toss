@@ -19,23 +19,26 @@ contract VRFCoordinatorV2PlusMock {
     function createSubscription() external returns (uint256) {
         return nextSubId++;
     }
+
     function addConsumer(uint256, address consumer) external {
         lastConsumer = consumer;
     }
+
     function removeConsumer(uint256, address consumer) external {
         lastRemovedConsumer = consumer;
     }
+
     function cancelSubscription(uint256 subId, address to) external {
         lastCancelledSubId = subId;
         lastCancelledTo = to;
     }
+
     function fundSubscriptionWithNative(uint256) external payable {
         fundedWithNative = true;
         lastFundedAmount = msg.value;
     }
-    function requestRandomWords(
-        VRFV2PlusClient.RandomWordsRequest calldata req
-    ) external pure returns (uint256) {
+
+    function requestRandomWords(VRFV2PlusClient.RandomWordsRequest calldata req) external pure returns (uint256) {
         (req);
         return uint256(keccak256("mockRequest"));
     }

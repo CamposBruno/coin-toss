@@ -9,7 +9,6 @@ import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/V
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {IRandomnessManager, IERC165} from "./IRandomnessManager.sol";
 
-
 // Struct to hold the initialization parameters for the RandomnessManager
 // This struct is used to initialize the contract with the necessary parameters
 // such as the VRF Coordinator address, LINK token address, key hash, etc.
@@ -36,8 +35,6 @@ struct RandomnessRequest {
     bool fulfilled;
     bool exists;
 }
-
-
 
 /**
  * @title RandomnessManagerV1
@@ -75,7 +72,7 @@ contract RandomnessManagerV1 is IRandomnessManager, VRFConsumerBaseV2Plus, Acces
     bool public nativePayment = true;
 
     // mapping to store randomness requests
-    mapping (uint256 => RandomnessRequest) private randomnessRequests;
+    mapping(uint256 => RandomnessRequest) private randomnessRequests;
 
     // modifier to check if the subscription is active/inactive
     modifier subscriptionActive() {
@@ -105,13 +102,15 @@ contract RandomnessManagerV1 is IRandomnessManager, VRFConsumerBaseV2Plus, Acces
      * Constructor that initializes the VRFConsumerBaseV2Plus with the VRF Coordinator address.
      * @param initialization The initialization parameters for the RandomnessManager.
      */
-    constructor(RandomnessManagerV1Initialization memory initialization) VRFConsumerBaseV2Plus(initialization.vrfCoordinatorV2Plus) {
+    constructor(RandomnessManagerV1Initialization memory initialization)
+        VRFConsumerBaseV2Plus(initialization.vrfCoordinatorV2Plus)
+    {
         LINK = LinkTokenInterface(initialization.linkTokenAddress);
         keyHash = initialization.keyHash;
 
-        // Create a new subscription 
+        // Create a new subscription
         subscriptionId = s_vrfCoordinator.createSubscription();
-        
+
         // add the contract as a consumer of the subscription
         s_vrfCoordinator.addConsumer(subscriptionId, address(this));
 
@@ -124,7 +123,13 @@ contract RandomnessManagerV1 is IRandomnessManager, VRFConsumerBaseV2Plus, Acces
      * @return requestId The ID of the request.
      * @dev This function can only be called by an account with the RANDOMNESS_AGENT_ROLE.
      */
-    function requestRandomWords(uint16 numWords) external override onlyRole(RANDOMNESS_AGENT_ROLE) subscriptionActive returns (uint256 requestId) {
+    function requestRandomWords(uint16 numWords)
+        external
+        override
+        onlyRole(RANDOMNESS_AGENT_ROLE)
+        subscriptionActive
+        returns (uint256 requestId)
+    {
         require(numWords > 0, "Number of words must be greater than 0");
 
         requestId = s_vrfCoordinator.requestRandomWords(
@@ -134,9 +139,7 @@ contract RandomnessManagerV1 is IRandomnessManager, VRFConsumerBaseV2Plus, Acces
                 requestConfirmations: requestConfirmations,
                 callbackGasLimit: callbackGasLimit,
                 numWords: numWords,
-                extraArgs: VRFV2PlusClient._argsToBytes(
-                    VRFV2PlusClient.ExtraArgsV1({nativePayment: nativePayment})
-                )
+                extraArgs: VRFV2PlusClient._argsToBytes(VRFV2PlusClient.ExtraArgsV1({nativePayment: nativePayment}))
             })
         );
 
@@ -172,13 +175,18 @@ contract RandomnessManagerV1 is IRandomnessManager, VRFConsumerBaseV2Plus, Acces
      * @dev This function can only be called by an account with the RANDOMNESS_AGENT_ROLE.
      * It checks if the request exists and has been fulfilled before returning the random words.
      */
-    function getRandomWords(uint256 requestId) external view onlyRole(RANDOMNESS_AGENT_ROLE) returns (uint256[] memory randomWords) {
+    function getRandomWords(uint256 requestId)
+        external
+        view
+        onlyRole(RANDOMNESS_AGENT_ROLE)
+        returns (uint256[] memory randomWords)
+    {
         require(randomnessRequests[requestId].exists, "Request does not exist");
         require(randomnessRequests[requestId].fulfilled, "Request not fulfilled");
         return randomnessRequests[requestId].randomWords;
     }
 
-    /** 
+    /**
      * @dev This function returns fulfillment status.
      * @param requestId The ID of the request to check.
      * @return fulfilled A boolean indicating whether the request has been fulfilled.
@@ -188,7 +196,7 @@ contract RandomnessManagerV1 is IRandomnessManager, VRFConsumerBaseV2Plus, Acces
     }
 
     /**
-     * Funds the subscription with LINK tokens 
+     * Funds the subscription with LINK tokens
      * @param amount The amount of LINK tokens to fund the subscription with.
      * @dev This function can only be called by an account with the DEFAULT_ADMIN_ROLE.
      * It transfers the specified amount of LINK tokens or native currency to the VRF Coordinator.
@@ -200,11 +208,7 @@ contract RandomnessManagerV1 is IRandomnessManager, VRFConsumerBaseV2Plus, Acces
         LINK.transferFrom(msg.sender, address(this), amount);
 
         // transfer LINK tokens from this contract to the VRF Coordinator
-        LINK.transferAndCall(
-            address(s_vrfCoordinator),
-            amount,
-            abi.encode(subscriptionId)
-        );
+        LINK.transferAndCall(address(s_vrfCoordinator), amount, abi.encode(subscriptionId));
         emit SubscriptionFunded(subscriptionId, address(LINK), amount);
     }
 
@@ -213,12 +217,15 @@ contract RandomnessManagerV1 is IRandomnessManager, VRFConsumerBaseV2Plus, Acces
      * @param amount The amount of native currency to fund the subscription with.
      * @dev This function can only be called by an account with the DEFAULT_ADMIN_ROLE.
      */
-    function fundSubscriptionWithNative(uint256 amount) public payable onlyRole(DEFAULT_ADMIN_ROLE) subscriptionActive {
+    function fundSubscriptionWithNative(uint256 amount)
+        public
+        payable
+        onlyRole(DEFAULT_ADMIN_ROLE)
+        subscriptionActive
+    {
         require(msg.value == amount, "Incorrect native currency amount sent");
 
-        s_vrfCoordinator.fundSubscriptionWithNative{ value: amount }(
-            subscriptionId
-        );
+        s_vrfCoordinator.fundSubscriptionWithNative{value: amount}(subscriptionId);
 
         emit SubscriptionFunded(subscriptionId, address(0), amount);
     }
@@ -325,7 +332,7 @@ contract RandomnessManagerV1 is IRandomnessManager, VRFConsumerBaseV2Plus, Acces
      */
     function setNativePayment(bool newNativePayment) external onlyRole(DEFAULT_ADMIN_ROLE) {
         nativePayment = newNativePayment;
-    }    
+    }
 
     /**
      * setLinkTokenContract for the VRF Coordinator.
@@ -351,7 +358,13 @@ contract RandomnessManagerV1 is IRandomnessManager, VRFConsumerBaseV2Plus, Acces
      * @dev This function checks if the contract supports the specified interface.
      * It overrides the supportsInterface function from the IERC165 interface.
      */
-    function supportsInterface(bytes4 interfaceId) public view virtual override(AccessControl, IERC165) returns (bool) {
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        virtual
+        override(AccessControl, IERC165)
+        returns (bool)
+    {
         return interfaceId == type(IRandomnessManager).interfaceId || super.supportsInterface(interfaceId);
     }
 }

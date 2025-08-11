@@ -19,7 +19,8 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
  * It is important to note that this contract does not implement any security measures or
  * anti-cheat mechanisms, so it should not be used in a real-world scenario where security and fairness are critical.
  */
-contract CoinToss is ReentrancyGuard { 
+
+contract CoinToss is ReentrancyGuard {
     // Structs to represent player details and game state
     // These structs are used to store player information and game status.
     // PlayerDetails struct contains the player's address and their choice of heads or tails.
@@ -62,10 +63,9 @@ contract CoinToss is ReentrancyGuard {
     Game private currentGame;
 
     // Minimum staleness to prevent immediate use
-    uint256 public constant MIN_GAME_STALENESS = 1 minutes; 
+    uint256 public constant MIN_GAME_STALENESS = 1 minutes;
     // Maximum staleness to prevent games from being played for too long
     uint256 public constant MAX_GAME_STALENESS = 1 days;
-
 
     // Events to log important actions in the game
     // These events can be used to track the game state and player actions.
@@ -79,8 +79,7 @@ contract CoinToss is ReentrancyGuard {
     event JoinedGame(address indexed player1, address indexed player2);
     event GameOutcome(address indexed winner, bool outcome); // outcome: 0 for heads, 1 for tails
 
-
-    /** 
+    /**
      * @param gameInit initializes the game with the first player's choice.
      * @notice This function is called when the contract is deployed to set up the initial game state.
      * It initializes the first player with their choice of heads or tails.
@@ -92,24 +91,29 @@ contract CoinToss is ReentrancyGuard {
      */
     constructor(GameInitialization memory gameInit) {
         require(gameInit.randomnessManager != address(0), "Invalid randomness manager address");
-        require(gameInit.maxStaleness >= MIN_GAME_STALENESS && gameInit.maxStaleness <= MAX_GAME_STALENESS, "Invalid max staleness");
+        require(
+            gameInit.maxStaleness >= MIN_GAME_STALENESS && gameInit.maxStaleness <= MAX_GAME_STALENESS,
+            "Invalid max staleness"
+        );
 
         Game storage game = currentGame; // Use storage to modify the game state
         IRandomnessManager randomnessManager = IRandomnessManager(gameInit.randomnessManager);
-        
+
         game.player1 = PlayerDetails({
             player: msg.sender, // The deployer is player 1
-            side: gameInit.side // player 1 chosen side 
+            side: gameInit.side // player 1 chosen side
         });
-        
+
         // check if the randomness manager implements the IRandomnessManager interface
-        require(randomnessManager.supportsInterface(type(IRandomnessManager).interfaceId), "Invalid randomness manager interface");
+        require(
+            randomnessManager.supportsInterface(type(IRandomnessManager).interfaceId),
+            "Invalid randomness manager interface"
+        );
 
         game.randomness.manager = randomnessManager;
         game.initTimestamp = block.timestamp;
         game.maxStaleness = gameInit.maxStaleness;
     }
-
 
     /**
      * @dev Allows a second player to join the game.
@@ -125,20 +129,20 @@ contract CoinToss is ReentrancyGuard {
 
         require(game.isCompleted == false, "Game already completed");
         require(game.player1.player != address(0), "Game not initialized yet");
-        require(game.player1.player != msg.sender, "Player 1 cannot join again");        
+        require(game.player1.player != msg.sender, "Player 1 cannot join again");
         require(game.player2.player == address(0), "Game already joined");
         require(block.timestamp - game.initTimestamp >= MIN_GAME_STALENESS, "Game too fresh");
         require(block.timestamp - game.initTimestamp <= game.maxStaleness, "Game too stale");
-        
+
         game.player2 = PlayerDetails({
             player: msg.sender,
             side: !currentGame.player1.side // select opposite side
         });
-        
+
         // Request 1 random word for the game
         // Randomness is only requested once when the second player joins. this is to save randomness credits.
         // The request ID is stored in the game state to be used later for retrieving the random words.
-        game.randomness.requestId = game.randomness.manager.requestRandomWords(1); 
+        game.randomness.requestId = game.randomness.manager.requestRandomWords(1);
         game.joinTimestamp = block.timestamp;
 
         emit JoinedGame(currentGame.player1.player, currentGame.player2.player);
@@ -163,27 +167,27 @@ contract CoinToss is ReentrancyGuard {
         require(!game.isCompleted, "Game already completed");
         require(game.player1.player != address(0), "Game not initialized yet");
         require(game.player2.player != address(0), "Game not joined yet");
-        require(game.player1.player == msg.sender  || game.player2.player == msg.sender, "Only players can toss the coin");
+        require(
+            game.player1.player == msg.sender || game.player2.player == msg.sender, "Only players can toss the coin"
+        );
         require(game.randomness.requestId != 0, "Randomness not Requested");
         require(game.randomness.manager.isRequestFulfilled(game.randomness.requestId), "Randomness not ready yet");
         require(block.timestamp - game.joinTimestamp >= MIN_GAME_STALENESS, "Game too fresh after join");
         require(block.timestamp - game.joinTimestamp <= game.maxStaleness, "Game too stale after join");
 
         // Simulate a coin toss
-        bool outcome = (sourceOfRandomness() % 2 == 0); 
+        bool outcome = (sourceOfRandomness() % 2 == 0);
 
         // Determine the winner based on the toss result
-        PlayerDetails memory winner = outcome == game.player1.side 
-            ? game.player1 
-            : game.player2; 
+        PlayerDetails memory winner = outcome == game.player1.side ? game.player1 : game.player2;
 
         assert(outcome == winner.side); // Ensure the winner's choice matches the toss result
 
-        game.outcome = outcome;  // Store the result of the toss
+        game.outcome = outcome; // Store the result of the toss
         game.isCompleted = true; // Mark the game as completed
         game.winner = winner.player; // Set the winner
 
-        emit GameOutcome(winner.player, outcome); // Emit the outcome of the game       
+        emit GameOutcome(winner.player, outcome); // Emit the outcome of the game
     }
 
     // DEPRECATED
@@ -202,7 +206,7 @@ contract CoinToss is ReentrancyGuard {
     //     joinGame();
     //     tossCoin();
     // }
-    
+
     /**
      * @dev Generates a pseudo-random number based on the block timestamp.
      * @notice This function is used to generate a pseudo-random number for the coin toss.
@@ -212,7 +216,7 @@ contract CoinToss is ReentrancyGuard {
      */
     function sourceOfRandomness() internal view returns (uint256) {
         GameRandomness storage randomness = currentGame.randomness;
-        
+
         // Get the primary random word from VRF
         uint256[] memory randomWords = randomness.manager.getRandomWords(randomness.requestId);
         uint256 primaryRandomness = randomWords[0];
@@ -220,19 +224,22 @@ contract CoinToss is ReentrancyGuard {
         // Additional entropy validation
         require(primaryRandomness != 0, "Random word cannot be zero");
         require(primaryRandomness != type(uint256).max, "Random word cannot be max value");
-        
+
         // Add additional entropy sources for enhanced security
-        uint256 additionalEntropy = uint256(keccak256(abi.encodePacked(
-            block.timestamp, // current block timestamp as seconds since unix epoch
-            block.prevrandao, // random number provided by the beacon chain
-            msg.sender, // player address
-            randomness.requestId // request ID
-        )));
-        
+        uint256 additionalEntropy = uint256(
+            keccak256(
+                abi.encodePacked(
+                    block.timestamp, // current block timestamp as seconds since unix epoch
+                    block.prevrandao, // random number provided by the beacon chain
+                    msg.sender, // player address
+                    randomness.requestId // request ID
+                )
+            )
+        );
+
         // Combine primary randomness with additional entropy
         return uint256(keccak256(abi.encodePacked(primaryRandomness, additionalEntropy)));
     }
-
 
     /**
      * @dev Returns the current game details.
@@ -257,8 +264,6 @@ contract CoinToss is ReentrancyGuard {
      * It does not modify the state of the contract, so it is a view function and does not cost gas to call.
      */
     function getPlayerDetails(bool isPlayer1) external view returns (PlayerDetails memory player) {
-        return isPlayer1 
-            ? currentGame.player1
-            : currentGame.player2;
+        return isPlayer1 ? currentGame.player1 : currentGame.player2;
     }
 }

@@ -40,7 +40,7 @@ contract RandomnessManagerV1Test is Test {
         words[0] = 42;
         words[1] = 99;
         vm.stopPrank();
-        
+
         // Call fulfillRandomWords as contract (simulate VRF callback)
         vm.prank(address(mockCoordinator));
         randomnessManager.rawFulfillRandomWords(reqId, words);

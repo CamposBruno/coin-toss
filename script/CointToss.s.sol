@@ -12,11 +12,13 @@ contract CoinTossScript is Script {
     function run() public {
         vm.startBroadcast();
 
-        coinToss = new CoinToss(CoinToss.GameInitialization({ 
-            side: true,
-            randomnessManager: address(0x456), // Mock address for randomness manager
-            maxStaleness: 1 hours
-        }));
+        coinToss = new CoinToss(
+            CoinToss.GameInitialization({
+                side: true,
+                randomnessManager: address(0x456), // Mock address for randomness manager
+                maxStaleness: 1 hours
+            })
+        );
 
         vm.stopBroadcast();
     }
