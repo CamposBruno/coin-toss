@@ -23,11 +23,27 @@ jobs:
       - name: Show Forge version
         run: |
           forge --version
+
+      - name: Debug - Check submodules
+        run: |
+          git submodule status
+          ls -la lib/
+          ls -la lib/forge-std/src/
+        
+      - name: Debug - Show remappings
+        run: |
+          cat remappings.txt
+          forge remappings
       
       - name: Forge install
         run: |
           forge install
         id: install
+
+      - name: Debug - Check after install
+        run: |
+          ls -la lib/forge-std/src/
+          cat lib/forge-std/src/Script.sol | head -5
 
       - name: Run Forge fmt
         run: |
