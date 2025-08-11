@@ -18,6 +18,11 @@ jobs:
         uses: foundry-rs/foundry-toolchain@v1
         with:
           version: stable
+      
+      - name: Forge install
+        run: |
+          forge install
+        id: install
   
       - name: Run tests
         run: forge test -vvv
