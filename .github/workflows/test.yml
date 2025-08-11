@@ -16,6 +16,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+          fetch-depth: 0
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
@@ -23,17 +24,13 @@ jobs:
       - name: Show Forge version
         run: |
           forge --version
-
+      
       - name: Debug - Check submodules
         run: |
           git submodule status
-          ls -la lib/
-          ls -la lib/forge-std/src/
-        
-      - name: Debug - Show remappings
-        run: |
-          cat remappings.txt
-          forge remappings
+          git submodule update --init --recursive
+          ls -la
+          ls -la lib/ || echo "lib directory not found"
       
       - name: Forge install
         run: |
@@ -42,6 +39,7 @@ jobs:
 
       - name: Debug - Check after install
         run: |
+          ls -la lib/
           ls -la lib/forge-std/src/
           cat lib/forge-std/src/Script.sol | head -5
 
