@@ -15,13 +15,17 @@ contract CoinTossTest is Test {
 
         randomnessManagerMock = new RandomnessManagerV1Mock();
 
-        toss = new CoinToss(
+        toss = new CoinToss();
+
+        toss.initialize(
             CoinToss.GameInitialization({
+                player1: player1,
                 side: true, // Player 1 chooses heads
                 randomnessManager: address(randomnessManagerMock), // Mock address for randomness manager
                 maxStaleness: 1 days // 1 day is the maximum staleness for the game
             })
         );
+
         // wait for 1 minute to ensure the game is not too fresh
         vm.warp(block.timestamp + toss.MIN_GAME_STALENESS());
         vm.stopPrank();
@@ -42,8 +46,12 @@ contract CoinTossTest is Test {
         vm.stopPrank();
 
         // Check that player 2 has joined the game
-        CoinToss.PlayerDetails memory player1Details = toss.getPlayerDetails(true);
-        CoinToss.PlayerDetails memory player2Details = toss.getPlayerDetails(false);
+        CoinToss.PlayerDetails memory player1Details = toss.getPlayerDetails(
+            true
+        );
+        CoinToss.PlayerDetails memory player2Details = toss.getPlayerDetails(
+            false
+        );
 
         assertEq(player1Details.player, player1); // Player 1 is the contract deployer
         assertEq(player2Details.player, player2); // Player 2 is the mocked address
@@ -148,8 +156,16 @@ contract CoinTossTest is Test {
     // ========== CONSTRUCTOR EDGE CASES ==========
 
     function test_ConstructorWithZeroAddress() public {
+        CoinToss tossT = new CoinToss();
         vm.expectRevert("Invalid randomness manager address");
-        new CoinToss(CoinToss.GameInitialization({side: true, randomnessManager: address(0), maxStaleness: 1 hours}));
+        tossT.initialize(
+            CoinToss.GameInitialization({
+                player1: player1,
+                side: true,
+                randomnessManager: address(0),
+                maxStaleness: 1 hours
+            })
+        );
     }
 
     function test_ConstructorWithInvalidInterface() public {
@@ -157,16 +173,24 @@ contract CoinTossTest is Test {
         address invalidManager = address(0x999);
 
         // This should revert because the contract doesn't implement the interface
+        CoinToss tossT = new CoinToss();
         vm.expectRevert();
-        new CoinToss(
-            CoinToss.GameInitialization({side: true, randomnessManager: invalidManager, maxStaleness: 1 hours})
+        tossT.initialize(
+            CoinToss.GameInitialization({
+                player1: player1,
+                side: true,
+                randomnessManager: invalidManager,
+                maxStaleness: 1 hours
+            })
         );
     }
 
     function test_ConstructorWithStalenessTooLow() public {
+        CoinToss tossT = new CoinToss();
         vm.expectRevert("Invalid max staleness");
-        new CoinToss(
+        tossT.initialize(
             CoinToss.GameInitialization({
+                player1: player1,
                 side: true,
                 randomnessManager: address(randomnessManagerMock),
                 maxStaleness: 1 minutes - 1 seconds // Too low, should be > 1 minute
@@ -175,9 +199,11 @@ contract CoinTossTest is Test {
     }
 
     function test_ConstructorWithStalenessTooHigh() public {
+        CoinToss tossT = new CoinToss();
         vm.expectRevert("Invalid max staleness");
-        new CoinToss(
+        tossT.initialize(
             CoinToss.GameInitialization({
+                player1: player1,
                 side: true,
                 randomnessManager: address(randomnessManagerMock),
                 maxStaleness: 1 days + 1 seconds // Too high, should be <= 1 day
@@ -187,16 +213,20 @@ contract CoinTossTest is Test {
 
     function test_ConstructorWithValidStaleness() public {
         // Test the boundary values
-        CoinToss toss1 = new CoinToss(
+        CoinToss toss1 = new CoinToss();
+        toss1.initialize(
             CoinToss.GameInitialization({
+                player1: player1,
                 side: true,
                 randomnessManager: address(randomnessManagerMock),
                 maxStaleness: 1 minutes + 1 // Just above minimum
             })
         );
 
-        CoinToss toss2 = new CoinToss(
+        CoinToss toss2 = new CoinToss();
+        toss2.initialize(
             CoinToss.GameInitialization({
+                player1: player1,
                 side: false,
                 randomnessManager: address(randomnessManagerMock),
                 maxStaleness: 1 days // Maximum allowed
@@ -246,8 +276,10 @@ contract CoinTossTest is Test {
     function test_JoinGameTooFresh() public {
         vm.startPrank(player1);
 
-        CoinToss newGame = new CoinToss(
+        CoinToss newGame = new CoinToss();
+        newGame.initialize(
             CoinToss.GameInitialization({
+                player1: player1,
                 side: true, // Player 1 chooses heads
                 randomnessManager: address(randomnessManagerMock), // Mock address for randomness manager
                 maxStaleness: 1 days // 1 day is the maximum staleness for the game
@@ -352,8 +384,12 @@ contract CoinTossTest is Test {
         joinGameAndWaitMinStalness();
         vm.stopPrank();
 
-        CoinToss.PlayerDetails memory player1Details = toss.getPlayerDetails(true);
-        CoinToss.PlayerDetails memory player2Details = toss.getPlayerDetails(false);
+        CoinToss.PlayerDetails memory player1Details = toss.getPlayerDetails(
+            true
+        );
+        CoinToss.PlayerDetails memory player2Details = toss.getPlayerDetails(
+            false
+        );
 
         assertEq(player1Details.player, player1);
         assertTrue(player1Details.side);
@@ -429,7 +465,9 @@ contract CoinTossTest is Test {
         joinGameAndWaitMinStalness();
         vm.stopPrank();
 
-        CoinToss.PlayerDetails memory player2Details = toss.getPlayerDetails(false);
+        CoinToss.PlayerDetails memory player2Details = toss.getPlayerDetails(
+            false
+        );
         assertEq(player2Details.player, player2);
         assertFalse(player2Details.side);
     }
@@ -438,12 +476,20 @@ contract CoinTossTest is Test {
         vm.startPrank(player1);
 
         RandomnessManagerV1Mock newMock = new RandomnessManagerV1Mock();
-        CoinToss newToss = new CoinToss(
-            CoinToss.GameInitialization({side: player1Side, randomnessManager: address(newMock), maxStaleness: 1 hours})
+        CoinToss newToss = new CoinToss();
+        newToss.initialize(
+            CoinToss.GameInitialization({
+                player1: player1,
+                side: player1Side,
+                randomnessManager: address(newMock),
+                maxStaleness: 1 hours
+            })
         );
         vm.stopPrank();
 
-        CoinToss.PlayerDetails memory player1Details = newToss.getPlayerDetails(true);
+        CoinToss.PlayerDetails memory player1Details = newToss.getPlayerDetails(
+            true
+        );
         assertEq(player1Details.side, player1Side);
     }
 
@@ -563,7 +609,9 @@ contract CoinTossTest is Test {
     // ========== PLAYER DETAILS BRANCH COVERAGE TESTS ==========
 
     function test_GetPlayerDetailsPlayer1() public view {
-        CoinToss.PlayerDetails memory player1Details = toss.getPlayerDetails(true);
+        CoinToss.PlayerDetails memory player1Details = toss.getPlayerDetails(
+            true
+        );
         assertEq(player1Details.player, player1);
         assertTrue(player1Details.side);
     }
@@ -574,7 +622,9 @@ contract CoinTossTest is Test {
         toss.joinGame();
         vm.stopPrank();
 
-        CoinToss.PlayerDetails memory player2Details = toss.getPlayerDetails(false);
+        CoinToss.PlayerDetails memory player2Details = toss.getPlayerDetails(
+            false
+        );
         assertEq(player2Details.player, player2);
         assertFalse(player2Details.side);
     }
@@ -656,7 +706,10 @@ contract CoinTossTest is Test {
         randomnessManagerMock.rawFulfillRandomWords(requestId, randomWords); // Mock the randomness fulfillment
     }
 
-    function _mockFulfillRandomWordsWithValue(uint256 requestId, uint256 value) internal {
+    function _mockFulfillRandomWordsWithValue(
+        uint256 requestId,
+        uint256 value
+    ) internal {
         // Mock the fulfillment of random words with a specific value
         uint256[] memory randomWords = new uint256[](1);
         randomWords[0] = value;
@@ -684,7 +737,10 @@ contract CoinTossTest is Test {
 
         // Invariant: If game is completed, winner should be one of the players
         if (game.isCompleted) {
-            assertTrue(game.winner == game.player1.player || game.winner == game.player2.player);
+            assertTrue(
+                game.winner == game.player1.player ||
+                    game.winner == game.player2.player
+            );
         }
     }
 
@@ -696,9 +752,11 @@ contract CoinTossTest is Test {
     }
 
     function test_ConstructorWithZeroRandomnessManager() public {
+        CoinToss tossT = new CoinToss();
         vm.expectRevert("Invalid randomness manager address");
-        new CoinToss(
+        tossT.initialize(
             CoinToss.GameInitialization({
+                player1: player1,
                 side: true,
                 randomnessManager: address(0), // This should trigger the revert
                 maxStaleness: 1 hours
@@ -707,9 +765,11 @@ contract CoinTossTest is Test {
     }
 
     function test_ConstructorWithStalenessEqualToMin() public {
+        CoinToss tossT = new CoinToss();
         vm.expectRevert("Invalid max staleness");
-        new CoinToss(
+        tossT.initialize(
             CoinToss.GameInitialization({
+                player1: player1,
                 side: true,
                 randomnessManager: address(randomnessManagerMock),
                 maxStaleness: 1 minutes - 1 seconds // Exactly equal + 1 second to MIN_GAME_STALENESS, should fail
@@ -719,8 +779,10 @@ contract CoinTossTest is Test {
 
     function test_ConstructorWithStalenessEqualToMax() public {
         // This should pass since it's exactly at the maximum
-        CoinToss validGame = new CoinToss(
+        CoinToss validGame = new CoinToss();
+        validGame.initialize(
             CoinToss.GameInitialization({
+                player1: player1,
                 side: true,
                 randomnessManager: address(randomnessManagerMock),
                 maxStaleness: 1 days // Exactly equal to MAX_GAME_STALENESS, should pass
