@@ -1,0 +1,7 @@
+appId: com.thehyve.app
+---
+- launchApp
+- assertVisible: "Welcome to The Hyve"
+- assertVisible: "Connect. Host. Experience."
+- assertVisible: "How It Works"
+- assertVisible: "About The Hyve"
